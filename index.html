@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <title>photoApp</title>
+</head>
+
+<body>
+    <!-- [+]マーク -->
+    <i class="fas fa-plus-circle fa-3x custom js-modal-open"></i>
+
+    <div class="modal js-modal">
+        <div class="modal__bg js-modal-close"></div> <!-- 空っぽの背景 -->
+        <div class="wrapper modal__content">
+            <div class="add-product">
+                <div class="button-copy">-- 登録 --<br>※現在登録できるのは写真のみです</div>
+
+                <div class="form--field">
+                    <label>タイトル</label>
+                    <input type="text" class="form--element" name="title">
+                </div>
+                <div class="form--field">
+                    <label>写真を追加</label><br>
+                    <input type="file" name="" id="fileButton" />
+                </div>
+                <div class="form--container -inline">
+                    <div class="form--field">
+                        <label>日付</label>
+                        <input type="datetime-local" class="form--element" name="date">
+                    </div>
+                </div>
+                <div class="form--field">
+                    <label>作品の説明</label>
+                    <textarea class="form--element textarea"></textarea>
+                </div>
+
+                <button id="up" class="submit-button">Add Product</button>
+                <div class="cancel js-modal-close">Cancel</div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <div id='imageArea' class="gallery"></div>
+
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.3/firebase.js"></script>
+
+    <script>
+        // Your web app's Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyD0yfDvoZWyzDYyxw63d1iRhZzFRV6vrRk",
+            authDomain: "chatapp-2nd-0531.firebaseapp.com",
+            projectId: "chatapp-2nd-0531",
+            storageBucket: "chatapp-2nd-0531.appspot.com",
+            messagingSenderId: "411197330661",
+            appId: "1:411197330661:web:c86c076dfebe1c0ca0b00c"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // 過去アップロードした画像を取得表示
+        console.log('OK');
+        var storageRef = firebase.storage().ref();
+        var listRef = storageRef.child('');
+
+        listRef.listAll().then(function (res) {
+
+            res.prefixes.forEach(function (folderRef) {
+                folderRef.listAll().then(function (res) {
+                    res.items.forEach(function (itemRef) {
+
+                        itemRef.getDownloadURL().then(function (url) {
+                            console.log(url)
+                            imgHtml = '<img class="image" src="' + url + '" alt="ダウンロード画像" />';
+                            $('#imageArea').append(imgHtml);
+                        }).catch(function (error) {
+
+                        });
+                    });
+                });
+            });
+
+            res.items.forEach(function (itemRef) {
+                console.log(itemRef.getDownloadURL())
+                imgHtml = '<img class="image" src="' + itemRef.getDownloadURL() + '" alt="ダウンロード画像" />';
+                $('#imageArea').append(imgHtml);
+            });
+        }).catch(function (error) {
+
+        });
+
+        //アップロード
+        const up = document.getElementById("up");
+        up.addEventListener("click", () => {
+            //ファイルの取得
+            const file = document.getElementById("fileButton").files[0];
+            //ファイルの参照
+            var storageRef = firebase.storage().ref();
+
+            //ファイルのメタデータ
+            var metadata = {
+                contentType: "image/*",
+            };
+            //画像ファイルのアップロード
+            const uploadTask = storageRef.child("image/" + file.name).put(file, metadata);
+            console.log(uploadTask);
+
+            var flg = 0;
+            uploadTask.on(
+                "state_changed",
+                function (snapshot) {
+                    var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    console.log("Upload is " + progress + "% done");
+                    switch (snapshot.state) {
+                        case firebase.storage.TaskState.PAUSED: // or 'paused'
+                            console.log("Upload is paused");
+                            break;
+                        case firebase.storage.TaskState.RUNNING: // or 'running'
+                            console.log("Upload is running");
+                            break;
+                    }
+                    if (progress === 100 && flg === 0) {
+                        console.log("100%です。");
+                        flg = 1;
+                        // download：reloadで全取得という強制手段を取る（本当は１個だけ持ってきたい）
+                        location.reload();
+                    }
+                },
+                function (error) {
+                    switch (error.code) {
+                        case "storage/unauthorized":
+                            // User doesn't have permission to access the object
+                            console.log(
+                                "目的の操作を行う権限がユーザーにありません。セキュリティ ルールが正しいことをご確認ください。"
+                            );
+                            break;
+
+                        case "storage/canceled":
+                            // User canceled the upload
+                            console.log("ユーザーがオペレーションをキャンセルしました。");
+                            break;
+
+                        case "storage/unknown":
+                            // Unknown error occurred, inspect error.serverResponse
+                            console.log("不明なエラーが発生しました。");
+                            break;
+                        default:
+                            console.log("error");
+                            break;
+                    }
+                }
+            );
+        });
+
+        // モーダル
+        $(function () {
+            $('.js-modal-open').on('click', function () {
+                $('.js-modal').fadeIn();
+                return false;
+            });
+            $('.js-modal-close').on('click', function () {
+                $('.js-modal').fadeOut();
+                return false;
+            });
+        });
+
+
+    </script>
+</body>
+
+</html>
